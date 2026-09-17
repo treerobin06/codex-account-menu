@@ -1,0 +1,13 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://127.0.0.1:4141",
+    "ANTHROPIC_API_KEY": "local",
+    "ANTHROPIC_AUTH_TOKEN": "",
+    "CLAUDE_CODE_OAUTH_TOKEN": "",
+    "ANTHROPIC_MODEL": "gpt-6-astra",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gpt-6-astra",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gpt-6-astra",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gpt-6-astra",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
+  }
+}

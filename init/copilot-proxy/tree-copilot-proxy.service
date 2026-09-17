@@ -1,0 +1,33 @@
+[Unit]
+Description=Private Copilot API bridge
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=copilot-proxy
+Group=copilot-proxy
+WorkingDirectory=/opt/tree-copilot-proxy
+ExecStart=/usr/bin/python3 /opt/tree-copilot-proxy/launcher.py
+LoadCredential=copilot-config:/etc/copilot-proxy/config.json
+# Optional; enable only after creating this root-readable credential file.
+# LoadCredential=network-proxy:/etc/copilot-proxy/network.env
+RuntimeDirectory=tree-copilot-proxy
+RuntimeDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=15
+CPUQuota=100%
+MemoryMax=768M
+TasksMax=128
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+
+[Install]
+WantedBy=multi-user.target

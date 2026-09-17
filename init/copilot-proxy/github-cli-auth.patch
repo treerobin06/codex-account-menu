@@ -1,0 +1,158 @@
+diff --git a/src/lib/api-config.ts b/src/lib/api-config.ts
+index 1e80cb7..27146c9 100644
+--- a/src/lib/api-config.ts
++++ b/src/lib/api-config.ts
+@@ -1,6 +1,7 @@
+ import type { AccountContext } from './account/types'
+ 
+ import { randomUUID } from 'node:crypto'
++import process from 'node:process'
+ 
+ export function standardHeaders() {
+   return {
+@@ -15,14 +16,24 @@ const USER_AGENT = `GitHubCopilotChat/${COPILOT_VERSION}`
+ 
+ const API_VERSION = '2025-05-01'
+ 
++// Opt-in compatibility path for an existing Copilot CLI OAuth login.
++// Keep the published editor-token exchange as the default.
++export function usesGitHubCliAuth(): boolean {
++  const mode = process.env.COPILOT_PROXY_AUTH_MODE ?? 'exchange'
++  if (mode !== 'exchange' && mode !== 'github-cli')
++    throw new Error('COPILOT_PROXY_AUTH_MODE must be exchange or github-cli')
++  return mode === 'github-cli'
++}
++
+ export function copilotBaseUrl(ctx: AccountContext) {
+   return ctx.accountType === 'individual'
+     ? 'https://api.githubcopilot.com'
+     : `https://api.${ctx.accountType}.githubcopilot.com`
+ }
+ export function copilotHeaders(ctx: AccountContext, vision: boolean = false) {
++  const cliAuth = usesGitHubCliAuth()
+   const headers: Record<string, string> = {
+-    'Authorization': `Bearer ${ctx.copilotToken}`,
++    'Authorization': `Bearer ${cliAuth ? ctx.githubToken : ctx.copilotToken}`,
+     'content-type': standardHeaders()['content-type'],
+     'copilot-integration-id': 'vscode-chat',
+     'editor-version': `vscode/${ctx.vsCodeVersion}`,
+@@ -35,6 +46,14 @@ export function copilotHeaders(ctx: AccountContext, vision: boolean = false) {
+     'x-vscode-user-agent-library-version': 'electron-fetch',
+   }
+ 
++  if (cliAuth) {
++    headers['copilot-integration-id'] = 'copilot-developer-cli'
++    headers['user-agent'] = 'tree-copilot-proxy/0.10.0'
++    delete headers['editor-version']
++    delete headers['editor-plugin-version']
++    delete headers['x-vscode-user-agent-library-version']
++  }
++
+   if (vision)
+     headers['copilot-vision-request'] = 'true'
+ 
+diff --git a/src/services/github/get-copilot-token.ts b/src/services/github/get-copilot-token.ts
+index 3f17081..d052dfd 100644
+--- a/src/services/github/get-copilot-token.ts
++++ b/src/services/github/get-copilot-token.ts
+@@ -1,13 +1,33 @@
+ import type { AccountContext } from '~/lib/account/types'
+ 
+-import { GITHUB_API_BASE_URL, githubHeaders } from '~/lib/api-config'
++import { copilotBaseUrl, copilotHeaders, GITHUB_API_BASE_URL, githubHeaders, usesGitHubCliAuth } from '~/lib/api-config'
+ import { HTTPError } from '~/lib/error'
+-import { fetchGitHub } from '~/lib/upstream-fetch'
++import { fetchCopilot, fetchGitHub } from '~/lib/upstream-fetch'
+ 
+ export async function getCopilotToken(
+   ctx: AccountContext,
+   signal?: AbortSignal,
+ ): Promise<GetCopilotTokenResponse> {
++  if (usesGitHubCliAuth()) {
++    if (!ctx.githubToken)
++      throw new Error('GitHub CLI auth requires an existing GitHub OAuth token')
++    // The Copilot CLI integration accepts GitHub OAuth directly. Validate it
++    // against the account's Copilot API; no new token or OAuth grant is created.
++    const validation = await fetchCopilot(`${copilotBaseUrl(ctx)}/models`, {
++      headers: copilotHeaders(ctx),
++      signal,
++    })
++    if (!validation.ok)
++      throw new HTTPError('Failed to validate direct Copilot CLI authentication', validation)
++    await validation.arrayBuffer()
++    // These are local revalidation deadlines, not the OAuth token's expiry.
++    return {
++      token: ctx.githubToken,
++      expires_at: Math.floor(Date.now() / 1000) + 3600,
++      refresh_in: 1800,
++    }
++  }
++
+   const response = await fetchGitHub(
+     `${GITHUB_API_BASE_URL}/copilot_internal/v2/token`,
+     {
+diff --git a/tests/github-cli-auth.test.ts b/tests/github-cli-auth.test.ts
+new file mode 100644
+index 0000000..7051154
+--- /dev/null
++++ b/tests/github-cli-auth.test.ts
+@@ -0,0 +1,59 @@
++import { afterEach, describe, expect, mock, test } from 'bun:test'
++
++import { createAccountContext } from '~/lib/account/context'
++import { copilotHeaders, usesGitHubCliAuth } from '~/lib/api-config'
++import { getCopilotToken } from '~/services/github/get-copilot-token'
++
++const originalMode = process.env.COPILOT_PROXY_AUTH_MODE
++const originalFetch = globalThis.fetch
++afterEach(() => {
++  if (originalMode === undefined)
++    delete process.env.COPILOT_PROXY_AUTH_MODE
++  else
++    process.env.COPILOT_PROXY_AUTH_MODE = originalMode
++  globalThis.fetch = originalFetch
++})
++
++function account() {
++  const ctx = createAccountContext({ accountType: 'enterprise' })
++  ctx.githubToken = 'test-github-oauth'
++  ctx.copilotToken = 'test-exchanged-token'
++  return ctx
++}
++
++describe('opt-in GitHub CLI OAuth authentication', () => {
++  test('preserves the upstream default', () => {
++    delete process.env.COPILOT_PROXY_AUTH_MODE
++    expect(usesGitHubCliAuth()).toBe(false)
++    expect(copilotHeaders(account()).Authorization).toBe('Bearer test-exchanged-token')
++    expect(copilotHeaders(account())['copilot-integration-id']).toBe('vscode-chat')
++  })
++
++  test('rejects a misspelled authentication mode', () => {
++    process.env.COPILOT_PROXY_AUTH_MODE = 'invalid'
++    expect(usesGitHubCliAuth).toThrow('must be exchange or github-cli')
++  })
++
++  test('validates the existing credential without exchanging or replacing it', async () => {
++    process.env.COPILOT_PROXY_AUTH_MODE = 'github-cli'
++    const calls: string[] = []
++    globalThis.fetch = mock(async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
++      calls.push(String(input))
++      const headers = new Headers(init?.headers)
++      expect(headers.get('authorization')).toBe('Bearer test-github-oauth')
++      expect(headers.get('copilot-integration-id')).toBe('copilot-developer-cli')
++      expect(headers.has('editor-version')).toBe(false)
++      return Response.json({ data: [] })
++    }) as unknown as typeof fetch
++    const result = await getCopilotToken(account())
++    expect(result.token).toBe('test-github-oauth')
++    expect(result.refresh_in).toBe(1800)
++    expect(calls).toEqual(['https://api.enterprise.githubcopilot.com/models'])
++  })
++
++  test('propagates upstream denial instead of claiming authentication success', async () => {
++    process.env.COPILOT_PROXY_AUTH_MODE = 'github-cli'
++    globalThis.fetch = mock(async () => new Response('denied', { status: 403 })) as unknown as typeof fetch
++    await expect(getCopilotToken(account())).rejects.toThrow('Failed to validate')
++  })
++})

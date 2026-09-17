@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Comment</key>
+	<string>Template only: replace {{HOME}} with your absolute home directory and configure the copilot-server SSH alias before installation.</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.tree.copilot-maintain</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/python3</string>
+		<string>{{HOME}}/.local/share/copilot-transport/copilot-maintain.py</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>{{HOME}}/.local/state/copilot-transport/maintenance.log</string>
+	<key>StandardOutPath</key>
+	<string>{{HOME}}/.local/state/copilot-transport/maintenance.log</string>
+	<key>StartInterval</key>
+	<integer>60</integer>
+</dict>
+</plist>

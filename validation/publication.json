@@ -1,0 +1,89 @@
+{
+  "checked_at": "2026-09-17T21:01:22.994819+08:00",
+  "scope": "Public source, synthetic tests and rebuilt Apple Silicon application",
+  "tests": {
+    "swift": {
+      "reported_tests": 291,
+      "suites": 21,
+      "result": "passed",
+      "conditional_skips": [
+        "installedCliUsesOnlyAnIsolatedEmptyHome",
+        "liveFetchOnlyWhenExplicitlyEnabled"
+      ]
+    },
+    "python_app": {
+      "tests": 26,
+      "result": "passed"
+    },
+    "python_transport": {
+      "tests": 27,
+      "result": "passed"
+    },
+    "python_server_health": {
+      "tests": 3,
+      "result": "passed"
+    },
+    "node_relay": {
+      "tests": 25,
+      "result": "passed"
+    },
+    "node_legacy_http_policy": {
+      "tests": 3,
+      "result": "passed"
+    }
+  },
+  "build": {
+    "configuration": "release",
+    "architecture": "arm64",
+    "clean_build_directory": true,
+    "home_prefix_remapped": true,
+    "source_consistent": true,
+    "signature": "ad-hoc, strict verification passed; not notarized",
+    "cli_help": "passed"
+  },
+  "privacy": {
+    "source_review": "No personal deployment information or real credentials found",
+    "binary_review": "No personal home path, deployment account or real network endpoint found",
+    "internal_reports_included": false,
+    "real_account_or_conversation_data_included": false,
+    "public_git_history": "Fresh history containing sanitized content only"
+  },
+  "limits": {
+    "production_install_or_restart": false,
+    "real_model_requests": 0,
+    "browser_remote_or_billing_acceptance": "Not rerun by public packaging; no blanket claim",
+    "upstream_bun_regression": "Not rerun; fixed-source patch applicability retained"
+  },
+  "app_files": [
+    {
+      "path": "Contents/Info.plist",
+      "bytes": 1025,
+      "sha256": "780287a903eeeade3bbfa09348f1d7d87bc3779da0b0cc514f022f08a5c073e3"
+    },
+    {
+      "path": "Contents/_CodeSignature/CodeResources",
+      "bytes": 3070,
+      "sha256": "bee16d0da0eb38e496bd665ed95050151f59ce99a0d27012d9958d344f5b9f1b"
+    },
+    {
+      "path": "Contents/MacOS/CodexAccountMenu",
+      "bytes": 4781856,
+      "sha256": "ef20c51a71f39f2f58a76b13639a071b79ee6b02e60c29c34c99aef0c3fb2ba8"
+    },
+    {
+      "path": "Contents/Resources/CodexAccountMenu_SwitcherCore.bundle/copilot-status.py",
+      "bytes": 10030,
+      "sha256": "fb018b8654780d32e4d585a124bf3016d35edbc0e1139ec695a1edfdb93fb9d6"
+    },
+    {
+      "path": "Contents/Resources/CodexAccountMenu_SwitcherCore.bundle/codex-api-relay.mjs",
+      "bytes": 26513,
+      "sha256": "485d35d810ddfb5330532af05bf0217f6c28c8378c00aa78e47c87faa6948f6b"
+    },
+    {
+      "path": "Contents/Helpers/codex-menu",
+      "bytes": 3277120,
+      "sha256": "003324bec9103dec1a2cfd8839b782a364c39dc9c8b632051281b8e956aa4315"
+    }
+  ]
+}

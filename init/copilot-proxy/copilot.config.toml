@@ -1,0 +1,17 @@
+model = "gpt-6-astra"
+model_provider = "copilot"
+model_reasoning_effort = "xhigh"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[model_providers.copilot]
+name = "GitHub Copilot server"
+base_url = "http://127.0.0.1:4141/v1"
+wire_api = "responses"
+supports_websockets = true
+request_max_retries = 1
+stream_max_retries = 1
+
+[model_providers.copilot.auth]
+command = "/usr/bin/printf"
+args = ["local"]

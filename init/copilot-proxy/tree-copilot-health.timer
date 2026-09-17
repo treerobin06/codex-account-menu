@@ -1,0 +1,11 @@
+[Unit]
+Description=Private Copilot service health and sustained-failure notification
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=tree-copilot-health.service
+
+[Install]
+WantedBy=timers.target

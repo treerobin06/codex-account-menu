@@ -1,0 +1,18 @@
+[Unit]
+Description=Check private Copilot socket and readiness without model generation
+After=tree-copilot-proxy.service
+OnFailure=notify-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/tree-copilot-proxy/health.py --notify
+StateDirectory=tree-copilot-health
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=55
+CPUQuota=10%
+MemoryMax=96M
+TasksMax=16
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes

@@ -1,0 +1,44 @@
+# Only local HTTP is handled here. Remote encryption and identity stay in SSH.
+global
+    nbthread 1
+    maxconn 128
+    stats socket {{ADMIN_SOCKET}} mode 600 level admin
+    stats timeout 3s
+    log stdout format raw local0 notice
+
+defaults
+    mode http
+    log global
+    retries 2
+    retry-on conn-failure
+    option redispatch
+    option http-keep-alive
+    timeout connect 3s
+    timeout queue 20s
+    timeout client 10m
+    timeout server 10m
+    timeout tunnel 65m
+    timeout http-request 30s
+    timeout http-keep-alive 15s
+    timeout check 2s
+
+frontend copilot_local
+    bind 127.0.0.1:{{FRONT_PORT}}
+    # Hold new requests during a short complete outage. No submitted POST is replayed.
+    tcp-request inspect-delay {{WAIT_TIME}}
+    tcp-request content accept if { nbsrv(copilot_paths) gt 0 }
+    tcp-request content accept if WAIT_END
+    http-request return status 503 content-type application/json hdr Retry-After 2 string '{"error":{"code":"transport_recovering","message":"Copilot transport is recovering; retry after connectivity returns"}}' if { nbsrv(copilot_paths) eq 0 }
+    default_backend copilot_paths
+
+backend copilot_paths
+    option httpchk
+    http-check send meth GET uri /readyz ver HTTP/1.1 hdr Host 127.0.0.1 hdr Connection close
+    # A legitimate application-unready response still proves the transport is alive.
+    # Token/upstream outages must not cause all identical paths to be restarted.
+    http-check expect rstatus ^(200|503)$
+    http-reuse safe
+    default-server inter {{CHECK_INTERVAL}} fastinter {{CHECK_INTERVAL}} downinter {{CHECK_INTERVAL}} rise {{RISE}} fall {{FALL}}
+    server primary 127.0.0.1:{{PRIMARY_PORT}} check
+    server backup 127.0.0.1:{{BACKUP_PORT}} check backup
+    # No shutdown-sessions action: health changes never evict existing streams.

@@ -1,0 +1,12 @@
+#!/bin/zsh
+set -euo pipefail
+if ! /usr/bin/curl --noproxy "*" -fsS --max-time 8 http://127.0.0.1:4141/readyz >/dev/null; then
+  print -u2 "Copilot 代理未就绪。检查：python3 $HOME/.local/share/copilot-transport/copilot-link.py status"
+  exit 1
+fi
+export CODEX_HOME="${COPILOT_CODEX_HOME:-$HOME/.codex-copilot}"
+export NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}"
+export no_proxy="$NO_PROXY"
+copilot_codex_binary="${COPILOT_CODEX_BINARY:-$(command -v codex || true)}"
+[[ -n "$copilot_codex_binary" ]] || { print -u2 'Set COPILOT_CODEX_BINARY to an installed Codex CLI'; exit 1; }
+exec "$copilot_codex_binary" "$@"

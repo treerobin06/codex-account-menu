@@ -1,0 +1,21 @@
+#!/bin/zsh
+set -euo pipefail
+if ! /usr/bin/curl --noproxy "*" -fsS --max-time 8 http://127.0.0.1:4141/readyz >/dev/null; then
+  print -u2 "Copilot 代理未就绪。检查：python3 $HOME/.local/share/copilot-transport/copilot-link.py status"
+  exit 1
+fi
+# These are local gateway placeholders, never the GitHub OAuth credential.
+export ANTHROPIC_BASE_URL=http://127.0.0.1:4141
+export ANTHROPIC_API_KEY=local
+export ANTHROPIC_MODEL=gpt-6-astra
+export ANTHROPIC_DEFAULT_OPUS_MODEL=gpt-6-astra
+export ANTHROPIC_DEFAULT_SONNET_MODEL=gpt-6-astra
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=gpt-6-astra
+export CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1
+export NO_PROXY="127.0.0.1,localhost,::1${NO_PROXY:+,$NO_PROXY}"
+export no_proxy="$NO_PROXY"
+unset CLAUDE_CODE_OAUTH_TOKEN ANTHROPIC_AUTH_TOKEN
+unset CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CODE_USE_FOUNDRY
+copilot_claude_binary="${COPILOT_CLAUDE_BINARY:-$(command -v claude || true)}"
+[[ -n "$copilot_claude_binary" ]] || { print -u2 'Set COPILOT_CLAUDE_BINARY to an installed Claude CLI'; exit 1; }
+exec "$copilot_claude_binary" --settings "${COPILOT_CLAUDE_SETTINGS:-$HOME/.config/copilot-proxy/claude-settings.json}" "$@"
